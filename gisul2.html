@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>모두의 기술 - 기술이술술</title>
+<!-- 레트로 픽셀 폰트 (둥근모꼴) 로드 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/neodgm/neodgm-webfont@latest/neodgm/style.css">
+<style>
+* { box-sizing: border-box; }
+body { 
+  margin: 0; 
+  background: #111; 
+  background-image: linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px);
+  background-size: 20px 20px;
+  font-family: 'NeoDunggeunmo', 'Courier New', monospace; 
+  color: #fff; 
+  display: flex; 
+  justify-content: center; 
+  align-items: flex-start;
+  min-height: 100vh; 
+  padding: 20px 10px;
+}
+#app { 
+  position: relative; 
+  width: 100%; 
+  max-width: 850px; 
+  background: #000; 
+  padding: 15px; 
+  border: 4px solid #555; 
+  box-shadow: 10px 10px 0px rgba(0,0,0,0.5);
+}
+h1 { 
+  text-align: center; 
+  font-size: 24px; 
+  color: #ffd700; 
+  margin: 0 0 20px 0; 
+  text-shadow: 2px 2px #ff003c; 
+}
+
+/* 가로 2단 레이아웃 설정 */
+.main-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap; 
+  justify-content: center;
+}
+.left-col {
+  flex: 0 0 auto;
+}
+.right-col {
+  flex: 1 1 300px; 
+  display: flex;
+  flex-direction: column;
+}
+
+.pixel-box {
+  background: #000;
+  border: 4px solid;
+  border-color: #fff #888 #888 #fff;
+  padding: 10px;
+  margin-bottom: 15px;
+}
+
+.scoreRow { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 15px;}
+.scoreCol { text-align: center; flex: 1; }
+.scoreCol b { display: block; font-size: 20px; margin-top: 6px; }
+.playerColor { color: #3b82f6; text-shadow: 1px 1px #000; } 
+.aiColor { color: #ef4444; text-shadow: 1px 1px #000; }
+
+#boardWrap { display: flex; justify-content: center; }
+canvas { 
+  background: #111; 
+  border: 4px solid;
+  border-color: #888 #fff #fff #888; 
+}
+
+.alertModal { 
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+  background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 100; 
+}
+.alertBox { 
+  background: #000; border: 4px solid; border-color: #fff #888 #888 #fff;
+  padding: 20px; max-width: 80%; text-align: center; font-size: 16px; line-height: 1.6; white-space: pre-line; 
+}
+.alertBox button { margin-top: 20px; width: 100%; font-size: 16px; }
+
+/* 3D 픽셀 주사위 디자인 */
+#diceArea { 
+  display: flex; align-items: center; justify-content: center; 
+  height: 70px; margin-bottom: 15px; background: #1a1a1a; border: 2px dashed #444;
+}
+.diceBox { 
+  width: 44px; height: 44px; background: #fff; 
+  border: 3px solid; border-color: #ddd #555 #555 #ddd;
+  border-radius: 8px; box-shadow: 2px 2px 0px #000;
+  display: grid; padding: 4px;
+  grid-template-areas: 
+    "a . c" 
+    "d e f" 
+    "g . i"; 
+  grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 3px;
+}
+.dice-dot { background: #111; border-radius: 50%; width: 100%; height: 100%; display: none; }
+.face-1 .dot-e { display: block; }
+.face-2 .dot-c, .face-2 .dot-g { display: block; }
+.face-3 .dot-c, .face-3 .dot-e, .face-3 .dot-g { display: block; }
+.face-4 .dot-a, .face-4 .dot-c, .face-4 .dot-g, .face-4 .dot-i { display: block; }
+.face-5 .dot-a, .face-5 .dot-c, .face-5 .dot-e, .face-5 .dot-g, .face-5 .dot-i { display: block; }
+.face-6 .dot-a, .face-6 .dot-d, .face-6 .dot-g, .face-6 .dot-c, .face-6 .dot-f, .face-6 .dot-i { display: block; }
+
+/* 주사위 굴러가는 애니메이션 */
+@keyframes rolling {
+  0% { transform: rotate(0deg) scale(1) translateY(0); }
+  25% { transform: rotate(90deg) scale(1.1) translateY(-10px); }
+  50% { transform: rotate(180deg) scale(1) translateY(0); }
+  75% { transform: rotate(270deg) scale(1.1) translateY(-10px); }
+  100% { transform: rotate(360deg) scale(1) translateY(0); }
+}
+.anim-roll { animation: rolling 0.3s linear infinite; }
+
+#panel { flex: 1; font-size: 15px; line-height: 1.6; display: flex; flex-direction: column; justify-content: center;}
+.btn { 
+  display: block; width: 100%; background: #222; color: #fff; 
+  border: 4px solid; border-color: #777 #111 #111 #777;
+  padding: 12px; margin: 6px 0; font-size: 14px; font-family: inherit; cursor: pointer; text-align: left; 
+}
+.btn:active { border-color: #111 #777 #777 #111; }
+.btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+.btn.confirm { background: #ffd700; color: #000; text-align: center; border-color: #fff #aa8800 #aa8800 #fff; font-size:15px; font-weight:bold;}
+.btn.correct { background: #1f6f3f; color:#fff; border-color: #6fcf97 #0b3d1f #0b3d1f #6fcf97; }
+.btn.wrong { background: #8b0000; color:#fff; border-color: #ff6b6b #4a0000 #4a0000 #ff6b6b; }
+
+.tag { font-size: 12px; padding: 2px 6px; margin-left: 6px; border: 2px solid; }
+.tagGood { background: #1f6f3f; border-color: #6fcf97 #0b3d1f #0b3d1f #6fcf97; } 
+.tagBad { background: #8b0000; border-color: #ff6b6b #4a0000 #4a0000 #ff6b6b; }
+.small { font-size: 13px; color: #aaa; margin-bottom: 5px; display: block; }
+#log { font-size: 13px; color: #888; text-align: center; margin-top: 15px; padding: 10px; background: #111; border: 1px solid #333; }
+.grade { font-size: 40px; text-align: center; color: #ffd700; text-shadow: 3px 3px #ff003c; margin: 20px 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- 제목 변경 -->
+  <h1>모두의 기술 <span style="font-size:14px; color:#fff; text-shadow:none;">- 친환경 에너지 대전 -</span></h1>
+  
+  <div class="main-container">
+    <div class="left-col">
+      <div id="boardWrap">
+        <canvas id="boardCanvas" width="396" height="396"></canvas>
+      </div>
+    </div>
+    
+    <div class="right-col">
+      <div class="scoreRow pixel-box" style="margin-bottom: 10px;">
+        <div class="scoreCol playerColor">PLAYER 1<br><b id="pBudget">-</b><span class="small">예산(억)</span></div>
+        <div class="scoreCol" style="border-left: 2px dashed #444; border-right: 2px dashed #444;"><span class="small">현재 턴</span><br><b id="turnInfo" style="color:#ffd700; font-size:22px;">-</b></div>
+        <div class="scoreCol aiColor">COM (AI)<br><b id="aBudget">-</b><span class="small">예산(억)</span></div>
+      </div>
+
+      <div id="diceArea"></div>
+      
+      <div id="panel" class="pixel-box"></div>
+      
+      <div id="log">> 게임을 준비 중입니다...</div>
+    </div>
+  </div>
+
+  <div id="alertModal" class="alertModal">
+    <div class="alertBox">
+      <div id="alertModalMsg"></div>
+      <button class="btn confirm" id="alertModalBtn">확인</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var REGIONS = ["해안","산간","평야","사막","강","농촌"];
+var SOURCES = [
+ {id:"solar",name:"태양광",cost:150,power:35,good:["평야","사막"],color:"#ffd700",label:"태"},
+ {id:"wind", name:"풍력", cost:170,power:45,good:["해안","산간"],color:"#3b82f6",label:"풍"},
+ {id:"hydro",name:"수력", cost:220,power:65,good:["강","산간"],  color:"#0ea5e9",label:"수"},
+ {id:"geo",  name:"지열", cost:200,power:40,good:["산간","사막"],color:"#ef4444",label:"지"},
+ {id:"bio",  name:"바이오",cost:120,power:30,good:["농촌","평야"],color:"#a855f7",label:"바"}
+];
+
+var QUIZZES = [
+ {q:"화석 연료 연소 시 가장 큰 문제점은 무엇인가요?", choices:["지구 온난화 유발","초기 설치비 과다","날씨의 영향","소음 발생"], answer:0, exp:"화석 연료는 온실가스(이산화탄소)를 배출하여 지구 온난화를 유발합니다."},
+ {q:"다음 중 화석 연료에 속하지 않는 것은?", choices:["석탄","석유","천연가스(LNG)","우라늄"], answer:3, exp:"우라늄은 원자력 발전의 원료이며 화석 연료가 아닙니다."},
+ {q:"신·재생 에너지의 공통적인 특징으로 옳은 것은?", choices:["화석 연료보다 오염물질 배출이 적다","설치 장소에 제한이 없다","날씨의 영향을 전혀 받지 않는다","발전 단가가 매우 저렴하다"], answer:0, exp:"신재생 에너지는 친환경적이지만, 초기 비용이 높고 자연환경의 영향을 많이 받습니다."},
+ {q:"풍력 발전을 설치하기 가장 유리한 장소는?", choices:["바람이 일정한 산간이나 해안","도심 한가운데","유속이 빠른 강","햇빛이 강한 사막"], answer:0, exp:"풍력 발전은 바람이 강하고 일정하게 부는 해안가나 산간 지역이 적합합니다."},
+ {q:"밀물과 썰물의 조수 간만의 차를 이용하는 발전 방식은?", choices:["파력 발전","조력 발전","수력 발전","지열 발전"], answer:1, exp:"조력 발전은 조수 간만의 차를 이용해 터빈을 돌립니다."},
+ {q:"화석 연료의 특징으로 옳지 않은 것은?", choices:["매장량이 한정되어 고갈 위험이 있다","전 세계에 고르게 분포되어 있다","연소 시 대기 오염 물질을 배출한다","현재 가장 많이 쓰이는 에너지원이다"], answer:1, exp:"화석 연료는 특정 지역에 편중되어 있어 자원 무기화가 될 수 있습니다."},
+ {q:"식물, 동물 등의 유기물을 태우거나 발효시켜 얻는 에너지는?", choices:["바이오 에너지","지열 에너지","연료 전지","태양열 에너지"], answer:0, exp:"바이오 에너지는 농작물, 가축 분뇨 등을 활용하여 에너지를 얻습니다."},
+ {q:"태양광 발전의 장점이 아닌 것은?", choices:["연료비가 들지 않는다","유지 보수가 간편하다","소음과 진동이 없다","비가 오거나 밤에도 발전량이 일정하다"], answer:3, exp:"태양광 발전은 일조량(날씨와 시간)의 영향을 매우 크게 받습니다."},
+ {q:"물이 높은 곳에서 낮은 곳으로 떨어지는 힘(위치 에너지)을 이용하는 발전은?", choices:["수력 발전","풍력 발전","파력 발전","해양 온도차 발전"], answer:0, exp:"수력 발전은 댐을 건설하여 물의 낙차를 이용해 전기를 생산합니다."},
+ {q:"지구 내부의 뜨거운 열을 이용하여 전기를 생산하는 방식은?", choices:["지열 발전","바이오 발전","태양열 발전","조류 발전"], answer:0, exp:"지열 발전은 화산 지대 등 지열이 높은 곳에서 유리합니다."},
+ {q:"친환경 에너지를 확대해야 하는 가장 중요한 이유는?", choices:["설치 비용이 저렴해서","온실가스를 줄여 지구를 보호하기 위해","화석 연료보다 부피가 작아서","어디서나 24시간 발전이 가능해서"], answer:1, exp:"기후 위기를 극복하고 지속 가능한 발전을 위해 친환경 에너지가 필수적입니다."},
+ {q:"버려지는 작은 에너지(진동, 체온 등)를 모아 전기로 바꾸는 기술은?", choices:["스마트 그리드","에너지 하베스팅","제로 에너지 빌딩","연료 전지"], answer:1, exp:"압전 소자 등을 활용해 낭비되는 에너지를 수확하는 기술을 '에너지 하베스팅'이라고 합니다."},
+ {q:"기존 전력망에 정보통신기술(ICT)을 접목해 에너지 효율을 높이는 지능형 전력망은?", choices:["스마트 팩토리","스마트 그리드","블록체인","클라우드 컴퓨팅"], answer:1, exp:"스마트 그리드는 공급자와 소비자가 정보를 교환하여 에너지를 효율적으로 관리합니다."},
+ {q:"천연가스(LNG)에 대한 설명으로 옳은 것은?", choices:["연소 시 오염물질이 전혀 없다","재생 에너지의 한 종류이다","석탄이나 석유보다 온실가스 배출이 적다","무한하게 사용할 수 있다"], answer:2, exp:"천연가스도 화석 연료여서 고갈되지만, 석탄·석유에 비해 연소 시 오염물질 배출이 적습니다."},
+ {q:"수소와 산소의 화학 반응을 통해 전기와 물을 생산하는 신에너지는?", choices:["연료 전지","바이오매스","지열 발전","태양광 발전"], answer:0, exp:"연료 전지는 화학 에너지를 직접 전기 에너지로 변환하며 부산물로 물만 배출합니다."}
+];
+
+var CHANCE_EVENTS = [
+ {text:"정부의 친환경 보조금을 받았습니다! 예산 +150억", type:"bonus", amount:150},
+ {text:"기상 악화로 발전소 효율이 떨어졌습니다. 점검비 발생! 예산 -100억", type:"penalty", amount:100},
+ {text:"에너지 정책 공모전 1위 수상! 예산 +200억", type:"bonus", amount:200},
+ {text:"탄소 배출 할당량을 초과하여 벌금을 냈습니다! 예산 -120억", type:"penalty", amount:120},
+ {text:"스마트 그리드 도입으로 전력 손실을 막았습니다! 예산 +100억", type:"bonus", amount:100},
+ {text:"태풍으로 인해 해안가 송전탑이 파손되었습니다! 복구비 -150억", type:"penalty", amount:150}
+];
+
+var GO_BONUS = 200;
+var START_BUDGET = 1500;
+var TOLL_MULTIPLIER = 2.5;
+var BOARD_SIZE = 9;
+var CELL = 44;
+
+function buildBoardOrder(){
+  var order = [];
+  var c, r;
+  for(c=BOARD_SIZE-1;c>=0;c--) order.push({row:BOARD_SIZE-1,col:c});
+  for(r=BOARD_SIZE-2;r>=0;r--) order.push({row:r,col:0});
+  for(c=1;c<=BOARD_SIZE-1;c++) order.push({row:0,col:c});
+  for(r=1;r<=BOARD_SIZE-2;r++) order.push({row:r,col:BOARD_SIZE-1});
+  return order;
+}
+var BOARD_ORDER = buildBoardOrder();
+var TOTAL_TILES = BOARD_ORDER.length;
+
+function buildTileMeta(){
+  return BOARD_ORDER.map(function(pos,i){
+    var type, label, region=null;
+    if(i === 0){
+      type="start"; label="출발";
+    } else if(i % 4 === 0){
+      var n = i / 4;
+      if(n % 2 === 0){ type="rest"; label="점검소"; }
+      else { type="chance"; label="황금열쇠"; }
+    } else {
+      type="region"; region = REGIONS[i % REGIONS.length]; label=region;
+    }
+    return { idx:i, row:pos.row, col:pos.col, type:type, label:label, region:region, owner:null, built:null, cost:0, effValue:0 };
+  });
+}
+
+var TILE_COLOR = {
+  "해안":"#1e3a8a", "산간":"#451a03", "평야":"#14532d", 
+  "사막":"#713f12", "강":"#0c4a6e", "농촌":"#3f6212"
+};
+
+var canvas = document.getElementById("boardCanvas");
+var ctx = canvas.getContext("2d");
+
+function tilePixel(tile){ return { x: tile.col*CELL, y: tile.row*CELL }; }
+
+function drawBoard(){
+  var canvasSize = BOARD_SIZE * CELL;
+  var center = canvasSize / 2;
+  
+  ctx.clearRect(0,0,canvasSize,canvasSize);
+  ctx.fillStyle="#000";
+  ctx.fillRect(0,0,canvasSize,canvasSize);
+  
+  ctx.fillStyle="#111";
+  ctx.fillRect(CELL, CELL, CELL*(BOARD_SIZE-2), CELL*(BOARD_SIZE-2));
+  
+  // ==========================================
+  // 중앙 텍스트 변경 (게임 이름 & 제작자)
+  // ==========================================
+  ctx.textAlign="center"; 
+  
+  // '모두의 기술' 입체 그림자
+  ctx.font="22px NeoDunggeunmo, Courier New"; 
+  ctx.fillStyle="#ff003c";
+  ctx.fillText("모두의 기술", center+2, center-10+2);
+  
+  // '모두의 기술' 메인 텍스트
+  ctx.fillStyle="#ffd700";
+  ctx.fillText("모두의 기술", center, center-10);
+  
+  // 제작자 이름
+  ctx.font="12px NeoDunggeunmo, Courier New"; 
+  ctx.fillStyle="#6fcf97";
+  ctx.fillText("by 기술이술술", center, center+15);
+  // ==========================================
+
+  gs.tiles.forEach(function(tile){
+    var p = tilePixel(tile);
+    var x = p.x, y = p.y;
+    var bg = "#222";
+    if(tile.type==="start") bg="#d97706";
+    else if(tile.type==="chance") bg="#db2777";
+    else if(tile.type==="rest") bg="#4b5563";
+    else bg = TILE_COLOR[tile.region];
+    
+    ctx.fillStyle = bg;
+    ctx.fillRect(x,y,CELL,CELL);
+    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.fillRect(x,y,CELL,2); 
+    ctx.fillRect(x,y,2,CELL); 
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(x,y+CELL-2,CELL,2); 
+    ctx.fillRect(x+CELL-2,y,2,CELL); 
+
+    if(tile.owner==="player" || tile.owner==="ai"){
+      var border = tile.owner==="player" ? "#3b82f6" : "#ef4444";
+      ctx.strokeStyle = border; 
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x+3,y+3,CELL-6,CELL-6);
+    }
+
+    ctx.fillStyle="#ffffff"; 
+    ctx.font="11px NeoDunggeunmo, Courier New";
+    ctx.textAlign="center"; 
+    ctx.textBaseline="top";
+    ctx.fillText(tile.label, x+CELL/2, y+5);
+
+    if(tile.built){
+      var s = SOURCES.find(function(s){ return s.id===tile.built; });
+      ctx.fillStyle = s.color;
+      ctx.fillRect(x+CELL/2 - 10, y+CELL - 20, 20, 14);
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x+CELL/2 - 10, y+CELL - 20, 20, 14);
+      
+      ctx.fillStyle="#000"; 
+      ctx.font="10px NeoDunggeunmo, Courier New";
+      ctx.textBaseline="middle";
+      ctx.fillText(s.label, x+CELL/2, y+CELL - 12);
+    }
+  });
+
+  var samePos = gs.playerPos === gs.aiPos;
+  drawToken(gs.playerPos, "#3b82f6", samePos ? -8 : 0);
+  drawToken(gs.aiPos, "#ef4444", samePos ? 8 : 0);
+  ctx.textAlign="left"; ctx.textBaseline="alphabetic";
+}
+
+function drawToken(pos, color, offsetX){
+  var tile = gs.tiles[pos];
+  var p = tilePixel(tile);
+  var tx = p.x + CELL/2 + offsetX - 6;
+  var ty = p.y + CELL/2 - 6; 
+  
+  ctx.fillStyle = color;
+  ctx.fillRect(tx, ty, 12, 12);
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.fillRect(tx, ty, 12, 2);
+  ctx.fillRect(tx, ty, 2, 12);
+  ctx.fillStyle = "#000";
+  ctx.fillRect(tx, ty+10, 12, 2);
+  ctx.fillRect(tx+10, ty, 2, 12);
+}
+
+function matchMul(region, s){ return s.good.indexOf(region) !== -1 ? 1 : 0.5; }
+function calcEff(region, s){ return Math.round((s.power * matchMul(region,s) / s.cost) * 100); }
+
+var gs = {};
+
+function setLog(m){ document.getElementById("log").textContent = "> " + m; }
+
+function showAlertModal(message, callback){
+  var modal = document.getElementById('alertModal');
+  var msgBox = document.getElementById('alertModalMsg');
+  var btn = document.getElementById('alertModalBtn');
+  btn.style.display = 'block';
+  msgBox.textContent = message;
+  modal.style.display = 'flex';
+  btn.onclick = function(){
+    modal.style.display = 'none';
+    if(callback) callback();
+  };
+}
+
+function updateStatusUI(){
+  document.getElementById("pBudget").textContent = gs.playerBudget;
+  document.getElementById("aBudget").textContent = gs.aiBudget;
+  document.getElementById("turnInfo").textContent = gs.turn==="player" ? "P 1" : "COM";
+  document.getElementById("turnInfo").style.color = gs.turn==="player" ? "#3b82f6" : "#ef4444";
+}
+
+function initGame(){
+  gs = {
+    tiles: buildTileMeta(), playerPos: 0, aiPos: 0,
+    playerBudget: START_BUDGET, aiBudget: START_BUDGET,
+    turn: "player", playerSkipTurn: false, aiSkipTurn: false,
+    pendingQuizTile: null, pendingQuizIdx: null, usedQuiz: []
+  };
+  document.getElementById('alertModal').style.display = 'none';
+  drawBoard(); updateStatusUI();
+  document.getElementById("diceArea").innerHTML = '<span style="color:#777; font-size:14px;">주사위가 준비되었습니다.</span>';
+  showIntro();
+}
+
+function showIntro(){
+  var panel = document.getElementById("panel");
+  panel.innerHTML =
+    '<span class="small">[SYSTEM] 게임 소개</span>' +
+    '<p>주사위를 굴려 퀴즈를 풀고 <b>친환경 발전소</b>를 건설하세요!</p>' +
+    '<p>상대의 발전소를 밟으면 통행료를 냅니다. 상대를 파산시키면 승리합니다.</p>' +
+    '<button class="btn confirm" onclick="startPlayerTurn()">▶ 게임 시작하기 (내 턴)</button>';
+}
+
+function createDiceHTML(num) {
+  return '<div class="diceBox face-' + num + '">' +
+    '<div class="dice-dot dot-a" style="grid-area:a"></div>' +
+    '<div class="dice-dot dot-c" style="grid-area:c"></div>' +
+    '<div class="dice-dot dot-d" style="grid-area:d"></div>' +
+    '<div class="dice-dot dot-e" style="grid-area:e"></div>' +
+    '<div class="dice-dot dot-f" style="grid-area:f"></div>' +
+    '<div class="dice-dot dot-g" style="grid-area:g"></div>' +
+    '<div class="dice-dot dot-i" style="grid-area:i"></div>' +
+  '</div>';
+}
+
+function rollDice(callback){
+  var diceArea = document.getElementById("diceArea");
+  var tickCount = 0;
+  var maxTicks = 12; 
+  
+  var interval = setInterval(function(){
+    var tempD = 1 + Math.floor(Math.random()*6);
+    diceArea.innerHTML = '<div style="display:flex; gap:15px; align-items:center;">' + 
+                         '<span style="color:#ffd700; font-size:16px;">주사위 굴리는 중...</span>' + 
+                         '<div class="anim-roll">' + createDiceHTML(tempD) + '</div></div>';
+    tickCount++;
+    
+    if(tickCount >= maxTicks){
+      clearInterval(interval);
+      var finalD = 1 + Math.floor(Math.random()*6);
+      diceArea.innerHTML = '<div style="display:flex; gap:15px; align-items:center;">' + 
+                           '<span style="color:#6fcf97; font-size:16px; font-weight:bold;">[' + finalD + ']칸 이동!</span>' + 
+                           '<div>' + createDiceHTML(finalD) + '</div></div>';
+      callback(finalD);
+    }
+  }, 80);
+}
+
+function startPlayerTurn(){
+  gs.turn = "player";
+  drawBoard(); updateStatusUI();
+  var panel = document.getElementById("panel");
+  if(gs.playerSkipTurn){
+    gs.playerSkipTurn = false;
+    panel.innerHTML =
+      '<span class="small" style="color:#ff6b6b;">[PLAYER 1 턴 - 1회 휴식]</span>' +
+      '<p>이전 퀴즈 오답으로 인해 이동이 불가합니다.<br>제자리에서 퀴즈에 재도전합니다!</p>' +
+      '<button class="btn confirm" onclick="retryPendingQuiz()">▶ 퀴즈 재도전</button>';
+    return;
+  }
+  panel.innerHTML =
+    '<span class="small">[PLAYER 1 턴] 예산 ' + gs.playerBudget + '억</span>' +
+    '<p>당신의 차례입니다. 주사위를 굴려 이동하세요.</p>' +
+    '<button class="btn confirm" onclick="playerRollAndMove()">▶ 주사위 굴리기</button>';
+}
+
+function playerRollAndMove(){ rollDice(function(sum){ setTimeout(function(){ movePiece("player", sum); }, 500); }); }
+function aiRollAndMove(){ rollDice(function(sum){ setTimeout(function(){ movePiece("ai", sum); }, 500); }); }
+
+function movePiece(owner, steps){
+  var posKey = owner==="player" ? "playerPos" : "aiPos";
+  var budgetKey = owner==="player" ? "playerBudget" : "aiBudget";
+  var stepCount = 0;
+  function moveOneStep(){
+    gs[posKey] = (gs[posKey] + 1) % TOTAL_TILES;
+    stepCount++;
+    if(gs[posKey] === 0){
+      gs[budgetKey] += GO_BONUS;
+      setLog((owner==="player"?"P1":"COM") + " 출발점 통과! 월급 +" + GO_BONUS + "억");
+    }
+    drawBoard(); updateStatusUI();
+    if(stepCount < steps){ setTimeout(moveOneStep, 220); } 
+    else { arriveAtTile(owner, gs[posKey]); }
+  }
+  moveOneStep();
+}
+
+function arriveAtTile(owner, idx){
+  var tile = gs.tiles[idx];
+  var panel = document.getElementById("panel");
+  var ownerName = owner==="player"?"PLAYER 1":"COM";
+
+  if(tile.type === "start"){
+    setLog(ownerName + " 출발점 도착.");
+    endOwnerStep(owner); return;
+  }
+  if(tile.type === "rest"){
+    panel.innerHTML = '<span class="small">[안전 지대] 점검소</span><p>' + ownerName + '이(가) 안전지대에서 쉬어갑니다.</p><button class="btn confirm" onclick="endOwnerStep(\'' + owner + '\')">▶ 턴 종료</button>';
+    if(owner==="ai") endOwnerStep(owner); return;
+  }
+  if(tile.type === "chance"){ handleChance(owner); return; }
+  
+  if(!tile.owner){ handleEmptyRegion(owner, idx); } 
+  else if(tile.owner === owner){
+    panel.innerHTML = '<span class="small">[내 영토] ' + tile.region + '</span><p>이미 내가 발전소를 지은 곳입니다.</p><button class="btn confirm" onclick="endOwnerStep(\'' + owner + '\')">▶ 턴 종료</button>';
+    if(owner==="ai") endOwnerStep(owner);
+  } else { handleToll(owner, idx); }
+}
+
+function handleChance(owner){
+  var evt = CHANCE_EVENTS[Math.floor(Math.random()*CHANCE_EVENTS.length)];
+  var budgetKey = owner==="player" ? "playerBudget" : "aiBudget";
+  if(evt.type === "bonus"){ gs[budgetKey] += evt.amount; } else { gs[budgetKey] -= evt.amount; }
+  updateStatusUI();
+  var ownerName = owner==="player"?"P1":"COM";
+  setLog(ownerName + " 황금열쇠: " + evt.text);
+  showAlertModal("[황금열쇠 도착]\n\n" + evt.text, function(){ checkBankrupt(owner, function(){ endOwnerStep(owner); }); });
+}
+
+function pickQuiz(){
+  if(!gs.usedQuiz) gs.usedQuiz = [];
+  if(gs.usedQuiz.length >= QUIZZES.length) gs.usedQuiz = [];
+  var idx;
+  do { idx = Math.floor(Math.random()*QUIZZES.length); } while(gs.usedQuiz.indexOf(idx) !== -1);
+  gs.usedQuiz.push(idx); return idx;
+}
+
+function handleEmptyRegion(owner, idx){
+  var panel = document.getElementById("panel");
+  var tile = gs.tiles[idx];
+  var qIdx = pickQuiz();
+  gs.pendingQuizTile = idx; gs.pendingQuizIdx = qIdx;
+  var qz = QUIZZES[qIdx];
+  
+  if(owner === "player"){
+    var html = '<span class="small" style="color:#6fcf97;">[' + tile.region + '] 건설 라이선스 퀴즈</span><p style="margin-top:0;">' + qz.q + '</p>';
+    qz.choices.forEach(function(c,i){
+      html += '<button class="btn" onclick="answerQuizForBuild(\'player\',' + i + ')">' + (i+1) + ". " + c + '</button>';
+    });
+    panel.innerHTML = html;
+  } else {
+    var correct = Math.random() < 0.65; 
+    var aiChoice = correct ? qz.answer : (qz.answer+1)%qz.choices.length;
+    revealAiQuizResult(idx, qz, aiChoice, correct);
+  }
+}
+
+function answerQuizForBuild(owner, choiceIdx){
+  var panel = document.getElementById("panel");
+  var qz = QUIZZES[gs.pendingQuizIdx];
+  var correct = (choiceIdx === qz.answer);
+  var btns = panel.querySelectorAll(".btn");
+  btns.forEach(function(b,i){
+    if(i===qz.answer) b.classList.add("correct");
+    if(i===choiceIdx && !correct) b.classList.add("wrong");
+    b.onclick = null;
+  });
+  var msg = document.createElement("p");
+  msg.style.color = correct ? "#6fcf97" : "#ff6b6b";
+  msg.style.fontSize = "14px";
+  msg.style.fontWeight = "bold";
+  if(correct){ msg.innerHTML = "[정답!]<br><span style='font-weight:normal;color:#fff'>" + qz.exp + "</span>"; } 
+  else { msg.innerHTML = "[오답! 다음 턴 1회 휴식]<br><span style='font-weight:normal;color:#fff'>" + qz.exp + "</span>"; }
+  panel.appendChild(msg);
+  var nextBtn = document.createElement("button");
+  nextBtn.className = "btn confirm";
+  if(correct){
+    nextBtn.textContent = "▶ 발전소 건설하기";
+    nextBtn.onclick = function(){ showBuildChoice(gs.pendingQuizTile); };
+  } else {
+    gs.playerSkipTurn = true;
+    nextBtn.textContent = "▶ 눈물을 머금고 턴 종료";
+    nextBtn.onclick = function(){ endOwnerStep("player"); };
+  }
+  panel.appendChild(nextBtn);
+}
+
+function retryPendingQuiz(){
+  var panel = document.getElementById("panel");
+  var qz = QUIZZES[gs.pendingQuizIdx];
+  var html = '<span class="small" style="color:#6fcf97;">[건설 라이선스 퀴즈 재도전]</span><p style="margin-top:0;">' + qz.q + '</p>';
+  qz.choices.forEach(function(c,i){
+    html += '<button class="btn" onclick="answerQuizForBuild(\'player\',' + i + ')">' + (i+1) + ". " + c + '</button>';
+  });
+  panel.innerHTML = html;
+}
+
+function showBuildChoice(idx){
+  var panel = document.getElementById("panel");
+  var tile = gs.tiles[idx];
+  var html = '<span class="small">[' + tile.region + '] 발전소 건설 - 내 예산 ' + gs.playerBudget + '억</span><p style="margin-top:0;">어떤 발전소를 지을까요?</p><div style="overflow-y:auto; max-height:200px; padding-right:5px;">';
+  SOURCES.forEach(function(s){
+    var afford = gs.playerBudget >= s.cost;
+    var eff = calcEff(tile.region, s);
+    var fit = s.good.indexOf(tile.region) !== -1;
+    html += '<button class="btn" ' + (afford?"":"disabled") + ' onclick="confirmPlayerBuild(' + idx + ', \'' + s.id + '\')">' +
+      s.name + ' 발전소 <span class="tag ' + (fit?'tagGood':'tagBad') + '">' + (fit?'입지 적합':'입지 불리') + '</span><br>' +
+      '<span class="small" style="margin-top:4px;color:#ccc;">비용: ' + s.cost + '억 | 발전량: ' + s.power + ' | 최종효율: ' + eff + '</span></button>';
+  });
+  html += '</div><button class="btn" style="border-color:#555; text-align:center; margin-top:10px;" onclick="endOwnerStep(\'player\')">건설하지 않고 넘어가기</button>';
+  panel.innerHTML = html;
+}
+
+function confirmPlayerBuild(idx, sourceId){
+  var tile = gs.tiles[idx];
+  var s = SOURCES.find(function(s){ return s.id===sourceId; });
+  if(gs.playerBudget < s.cost){ setLog("예산 부족!"); return; }
+  gs.playerBudget -= s.cost;
+  tile.owner = "player"; tile.built = s.id; tile.cost = s.cost; tile.effValue = calcEff(tile.region, s);
+  updateStatusUI(); drawBoard();
+  setLog(tile.region + "에 " + s.name + " 건설 완료.");
+  endOwnerStep("player");
+}
+
+function revealAiQuizResult(idx, qz, aiChoice, correct){
+  var tile = gs.tiles[idx];
+  var resultMsg = "[COM 퀴즈 도전] - " + tile.region + "\n\n" + qz.q + "\n\nCOM 선택: " + (aiChoice+1) + "번\n정답: " + (qz.answer+1) + "번\n\n" +
+    (correct ? "COM이 정답을 맞혀 건설을 시작합니다!" : "COM이 틀렸습니다! (다음 턴 1회 휴식)");
+  showAlertModal(resultMsg, function(){ aiBuildDecision(idx, correct); });
+}
+
+function aiBuildDecision(idx, correct){
+  if(!correct){ gs.aiSkipTurn = true; endOwnerStep("ai"); return; }
+  var tile = gs.tiles[idx]; var best = null;
+  SOURCES.forEach(function(s){
+    if(s.cost <= gs.aiBudget){
+      var eff = calcEff(tile.region, s);
+      if(!best || eff > best.eff){ best = {source:s, eff:eff}; }
+    }
+  });
+  if(best){
+    gs.aiBudget -= best.source.cost;
+    tile.owner = "ai"; tile.built = best.source.id; tile.cost = best.source.cost; tile.effValue = best.eff;
+    setLog("COM: " + tile.region + "에 " + best.source.name + " 건설.");
+  } else { setLog("COM: 예산 부족으로 건설 포기."); }
+  updateStatusUI(); drawBoard(); endOwnerStep("ai");
+}
+
+function handleToll(owner, idx){
+  var tile = gs.tiles[idx];
+  var toll = Math.round(tile.effValue * TOLL_MULTIPLIER);
+  var payerKey = owner==="player" ? "playerBudget" : "aiBudget";
+  var receiverKey = owner==="player" ? "aiBudget" : "playerBudget";
+  var ownerLabel = tile.owner==="player" ? "P1" : "COM";
+  var myName = owner==="player" ? "P1" : "COM";
+  gs[payerKey] -= toll; gs[receiverKey] += toll;
+  updateStatusUI(); setLog(myName + ", 통행료 " + toll + "억 지불.");
+  showAlertModal("[앗! 통행료 지불]\n\n" + myName + "이(가) " + ownerLabel + "의 " + tile.region +
+    " 발전소에 도착했습니다.\n(발전 효율 " + tile.effValue + ")\n\n전력 사용료 " + toll + "억을 지불합니다.", function(){
+    checkBankrupt(owner, function(){ endOwnerStep(owner); });
+  });
+}
+
+function checkBankrupt(owner, continueCallback){
+  var budgetKey = owner==="player" ? "playerBudget" : "aiBudget";
+  if(gs[budgetKey] < 0){
+    var winner = owner==="player" ? "ai" : "player";
+    showFinalResult(winner); return;
+  }
+  continueCallback();
+}
+
+function endOwnerStep(owner){
+  if(owner === "player"){ startAiTurn(); } else { startPlayerTurn(); }
+}
+
+function startAiTurn(){
+  gs.turn = "ai";
+  drawBoard(); updateStatusUI();
+  var panel = document.getElementById("panel");
+  if(gs.aiSkipTurn){
+    gs.aiSkipTurn = false;
+    panel.innerHTML = '<span class="small" style="color:#ff6b6b;">[COM 턴 - 1회 휴식]</span><p>COM이 퀴즈 오답으로 제자리에서 재도전합니다.</p><button class="btn confirm" onclick="aiRetryPendingQuiz()">▶ COM 퀴즈 보기</button>';
+    return;
+  }
+  panel.innerHTML = '<span class="small">[COM 턴] 예산 ' + gs.aiBudget + '억</span><p>COM이 주사위를 굴립니다.</p><button class="btn confirm" onclick="aiRollAndMove()">▶ 진행하기</button>';
+}
+
+function aiRetryPendingQuiz(){
+  var idx = gs.pendingQuizTile; var qz = QUIZZES[gs.pendingQuizIdx];
+  var correct = Math.random() < 0.65;
+  var aiChoice = correct ? qz.answer : (qz.answer+1) % qz.choices.length;
+  revealAiQuizResult(idx, qz, aiChoice, correct);
+}
+
+function showFinalResult(winner){
+  var panel = document.getElementById("panel");
+  document.getElementById("diceArea").innerHTML = "";
+  var isPlayerWin = winner === "player";
+  var grade = isPlayerWin ? "YOU WIN!" : "GAME OVER";
+  var comment = isPlayerWin
+    ? "COM을 파산시키고 에코빌의 에너지 패권을 차지했습니다! 완벽한 승리입니다."
+    : "COM에게 패배하여 파산했습니다... 발전소 입지 조건과 퀴즈 정답을 다시 공부하고 도전해보세요!";
+  panel.innerHTML =
+    '<span class="small">[게임 종료]</span>' +
+    '<div class="grade" style="color:' + (isPlayerWin?"#ffd700":"#ef4444") + '">' + grade + '</div>' +
+    '<p style="text-align:center;">최종 예산 - P1: ' + Math.max(0,gs.playerBudget) + '억 / COM: ' + Math.max(0,gs.aiBudget) + '억</p>' +
+    '<p>' + comment + '</p>' +
+    '<button class="btn confirm" onclick="initGame()">▶ 다시 도전하기</button>';
+  setLog(isPlayerWin ? "PLAYER 1 승리!" : "COM 승리.");
+}
+
+document.fonts.ready.then(function() { initGame(); });
+</script>
+</body>
+</html>
