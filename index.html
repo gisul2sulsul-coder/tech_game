@@ -159,6 +159,7 @@ footer{color:var(--steel);font:12px/1.5 var(--f-small);text-align:center}
       <span class="pill" id="roundInfo">ROUND 1/20</span>
       <button class="pill" id="bigBtn" type="button" aria-pressed="true">▣ 큰 화면 자동</button>
       <button class="pill" id="sndBtn" type="button" aria-pressed="false">♪ 소리 꺼짐</button>
+      <button class="pill" id="bgmBtn" type="button" aria-pressed="false">♫ 배경음 꺼짐</button>
     </div>
   </header>
 
@@ -192,6 +193,8 @@ footer{color:var(--steel);font:12px/1.5 var(--f-small);text-align:center}
 
   <footer>원작 기술이술술 · 글꼴 Galmuri (SIL OFL 1.1)</footer>
 </div>
+
+<audio id="bgm" src="bgm.mp3" loop preload="auto"></audio>
 
 <script>
 (function(){
@@ -713,7 +716,10 @@ function newGame(){
   card({tag:"START", tagColor:INK, title:"친환경 에너지 대전에 오신 것을 환영합니다!",
     html:"<p>주사위를 굴려 도착한 땅에서 퀴즈를 맞히면 <b>친환경 발전소</b>를 지을 수 있습니다.</p>"+
          "<p>땅에 맞는 발전소를 지을수록 사용료가 커집니다. 상대를 파산시키거나 "+CFG.MAX_ROUNDS+"라운드 뒤 총자산이 많으면 승리!</p>",
-    buttons:ok(function(){ startTurn("player"); }, "▶ 게임 시작 (당신 먼저)")});
+    buttons:ok(function(){
+      if(!bgmInit){ bgmInit = true; setBgm(true); }
+      startTurn("player");
+    }, "▶ 게임 시작 (당신 먼저)")});
 }
 
 function startTurn(who){
@@ -1103,6 +1109,27 @@ $("sndBtn").onclick=function(){
   snd=!snd; this.setAttribute("aria-pressed", String(snd));
   this.textContent = snd ? "♪ 소리 켜짐" : "♪ 소리 꺼짐"; sfx("ok");
 };
+
+/* 배경음악(BGM) 제어 */
+var bgm = $("bgm"), bgmOn = false, bgmInit = false;
+bgm.volume = 0.35; // 배경음 크기 (0.0 ~ 1.0 사이로 조절 가능)
+
+function setBgm(on){
+  bgmOn = on;
+  $("bgmBtn").setAttribute("aria-pressed", String(bgmOn));
+  $("bgmBtn").textContent = bgmOn ? "♫ 배경음 켜짐" : "♫ 배경음 꺼짐";
+  if(bgmOn){
+    bgm.play().catch(function(){});
+  } else {
+    bgm.pause();
+  }
+}
+
+$("bgmBtn").onclick = function(){
+  bgmInit = true;
+  setBgm(!bgmOn);
+};
+
 
 /* 큰 화면(전자칠판) 모드: 화면에 맞춰 0.25배 단위로 전체를 확대 */
 var bigMode=true;
